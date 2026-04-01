@@ -1,0 +1,31 @@
+/* Bitcho — Paper Trading Dashboard */
+/* Se implementará en Fase 5 */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+  min-height: 100vh;
+}
+
+header {
+  text-align: center;
+  padding: 2rem;
+  border-bottom: 1px solid #30363d;
+}
+
+header h1 {
+  font-size: 2rem;
+  color: #f7931a;
+}
+
+header p {
+  color: #8b949e;
+  margin-top: 0.5rem;
+}
