@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": 1,
+    "timestamp": "2026-04-07T01:01:01.089Z",
+    "action": "BUY",
+    "price": 1223070,
+    "mxn_amount": 2500,
+    "btc_amount": 0.00203382,
+    "fee_mxn": 12.5,
+    "confidence": 0.75,
+    "reasoning": "Caída >10% en 24h desde ~1237590 a 1223070 (-1.19% en últimas 2h). Precio actual 1.19% por debajo del promedio 8h (1237k). Condiciones cumplen 2/3 buy: caída significativa + precio bajo. Confianza media por volatilidad extrema (cambio24h inconsistente). Sizing 40% del portafolio (4k MXN) = 0.00327 BTC. Mantiene 60% MXN reserva. Comisión incorporada en cálculo (4000*0.995/1223070).",
+    "portfolio_value_after": 9987.5
+  }
+]
