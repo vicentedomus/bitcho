@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "style": "balanced",
+  "limits": {
+    "min_trade_mxn": 500,
+    "max_trade_pct": 0.25,
+    "max_btc_exposure_pct": 0.70,
+    "min_mxn_reserve_pct": 0.30,
+    "cooldown_hours": 4
+  },
+  "fees": {
+    "taker_rate": 0.005,
+    "description": "Bitso taker fee for low volume"
+  },
+  "buy_signals": {
+    "min_required": 2,
+    "signals": [
+      { "name": "price_drop", "threshold_pct": 2.0, "window_hours": 12 },
+      { "name": "below_avg_24h", "description": "Price below 24h average" },
+      { "name": "mxn_available", "threshold_pct": 40 }
+    ]
+  },
+  "sell_signals": {
+    "min_required": 2,
+    "signals": [
+      { "name": "unrealized_gain", "threshold_pct": 3.0 },
+      { "name": "price_surge", "threshold_pct": 2.5, "window_hours": 12 },
+      { "name": "overexposure", "threshold_pct": 60 }
+    ]
+  },
+  "sizing": {
+    "high_confidence": { "min": 0.8, "max_portfolio_pct": 0.25 },
+    "medium_confidence": { "min": 0.5, "max_portfolio_pct": 0.15 },
+    "low_confidence": { "min": 0.0, "action": "minimum_or_hold" }
+  }
+}
