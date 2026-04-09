@@ -46,5 +46,17 @@
     "confidence": 0.85,
     "reasoning": "Venta parcial de posición. Precio actual 1260990 vs avg compra 1221570.72 = ganancia 3.23% (cumple criterio >=3%). Subida fuerte en últimas 2h (1241280→1260000 MXN = +1.5%, tendencia al alza). Portafolio en 55.8% BTC (apropiado). Volumen bajo (8.14 BTC). Estrategia: realizar ganancias en rebote alcista, mantener 40% MXN mínimo requerido. Comisión 0.5% factorizada.",
     "portfolio_value_after": 10164.76
+  },
+  {
+    "id": 5,
+    "timestamp": "2026-04-09T02:00:58.871Z",
+    "action": "BUY",
+    "price": 1239110,
+    "mxn_amount": 2527.6,
+    "btc_amount": 0.00202965,
+    "fee_mxn": 12.64,
+    "confidence": 0.72,
+    "reasoning": "Caída de -14450% en 24h desde máximo de 1256220. Precio actual 1239110 es 1.36% por debajo del promedio 24h (~1256480). Acumulación en caída aprovechando soporte. Volumen moderado (7.26 BTC). Portafolio con 30.5% BTC permite compra del 15% (confianza media 0.72). Comisión: 0.5% incluida. Objetivo: acumular posición bajista, Hold ~70% del tiempo.",
+    "portfolio_value_after": 10097.75
   }
 ]
