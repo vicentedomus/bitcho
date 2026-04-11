@@ -93,7 +93,7 @@ SENALES DE COMPRA (necesitas al menos 2 de 3):
 
 SENALES DE VENTA (necesitas al menos 2 de 3):
 - Ganancia acumulada: BTC en mano tiene >=3% ganancia vs precio promedio de compra
-- Subida reciente: precio subio >=2.5% en ultimas 6-12 horas
+- Subida reciente: precio subio >=1.5% en ultimas 6-12 horas
 - Sobreexposicion: mas del 60% del portafolio esta en BTC
 
 SIZING POR CONFIANZA:
