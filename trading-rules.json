@@ -24,7 +24,7 @@
     "min_required": 2,
     "signals": [
       { "name": "unrealized_gain", "threshold_pct": 3.0 },
-      { "name": "price_surge", "threshold_pct": 2.5, "window_hours": 12 },
+      { "name": "price_surge", "threshold_pct": 1.5, "window_hours": 12 },
       { "name": "overexposure", "threshold_pct": 60 }
     ]
   },
