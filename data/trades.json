@@ -106,5 +106,17 @@
     "confidence": 0.75,
     "reasoning": "Caída de -1.81% en 24h cumple criterio >=2% en ventana 6-12h (desde 1265590 a 1239340 = -1.81%). Precio actual 1239340 < avg 24h ~1260000. Portafolio en 60% BTC, espacio para acumular (max 70%). Reserva MXN $4027.58 permite operación de $1206.87 (30% de reserva). Confianza media-alta por corrección clara. Sizing medio (0.75 confidence) = 15% de presupuesto disponible.",
     "portfolio_value_after": 10076.1
+  },
+  {
+    "id": 10,
+    "timestamp": "2026-04-13T16:01:03.083Z",
+    "action": "SELL",
+    "price": 1247460,
+    "mxn_amount": 2517.93,
+    "btc_amount": 0.00202858,
+    "fee_mxn": 12.65,
+    "confidence": 0.75,
+    "reasoning": "Ganancia 1.01% vs avg compra (1247460 vs 1235529). Subida fuerte últimas 2h (+1.01% cambio24h, +2.39% en última hora). BTC al 70.1% (máximo permitido). Venta parcial para reducir exposición y asegurar ganancias. Comisión cubierta con spread positivo.",
+    "portfolio_value_after": 10109.67
   }
 ]
