@@ -1,67 +1,118 @@
 // ============================================================
+// BITCHO — Workflow de trading (n8n) con Supabase
+// ============================================================
+// Fuente de verdad: Supabase schema `bitcho` (proyecto BD DnD Halo)
+// URL base: https://dwmzchtqjcblupmmklcl.supabase.co/rest/v1
+//
+// ESTRUCTURA DEL WORKFLOW (después de la migración):
+//   1. Schedule Trigger (cada 1 hora)
+//   2. HTTP Request "GET Bitso Ticker" → https://api.bitso.com/v3/ticker/?book=btc_mxn
+//   3. HTTP Request "GET Portfolio"  → Supabase GET /portfolio?id=eq.1
+//   4. HTTP Request "GET Trades"     → Supabase GET /trades?order=executed_at.desc&limit=20
+//   5. HTTP Request "GET Snapshots"  → Supabase GET /snapshots?order=captured_at.desc&limit=24
+//   6. Code Node "Preparar Contexto Claude"  (ver CODE NODE 1 abajo)
+//   7. LLM node "Claude Haiku"
+//   8. Code Node "Procesar Decisión"         (ver CODE NODE 2 abajo)
+//   9. HTTP Request "Insert Snapshot" → Supabase POST /snapshots   (siempre)
+//  10. IF node: {{ $json.should_record_trade === true }}
+//       ├─ true  → HTTP Request "Record Trade" → Supabase POST /rpc/record_trade
+//       └─ false → (termina)
+//
+// NODOS A ELIMINAR del workflow viejo:
+//   - "Leer portfolio.json", "Leer trades.json", "Leer snapshots.json"
+//   - "Agregar Snapshot" (si existía un nodo que escribía snapshots.json)
+//   - Cualquier nodo "GitHub → Create/Update File" para portfolio/trades
+//
+// CREDENCIALES EN n8n (Settings > Credentials > New > HTTP Header Auth):
+//   - Nombre: "Supabase Service Role"
+//   - Headers:
+//       apikey:        <SUPABASE_SERVICE_ROLE_KEY>
+//       Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
+//
+// HEADERS A USAR EN CADA HTTP REQUEST A SUPABASE:
+//   - Content-Type:    application/json
+//   - Accept-Profile:  bitcho     (en GET)
+//   - Content-Profile: bitcho     (en POST)
+//   - Prefer:          return=representation   (opcional, devuelve la fila creada)
+//
+// URLs de los nodos HTTP:
+//   GET Portfolio:  {{SUPABASE_URL}}/rest/v1/portfolio?select=*&id=eq.1
+//   GET Trades:     {{SUPABASE_URL}}/rest/v1/trades?select=*&order=executed_at.desc&limit=20
+//   GET Snapshots:  {{SUPABASE_URL}}/rest/v1/snapshots?select=*&order=captured_at.desc&limit=24
+//   POST Snapshot:  {{SUPABASE_URL}}/rest/v1/snapshots
+//     body:         {{ JSON.stringify($json.snapshot_payload) }}
+//   POST Record Trade: {{SUPABASE_URL}}/rest/v1/rpc/record_trade
+//     body:         {{ JSON.stringify($json.trade_payload) }}
+// ============================================================
+
+
+// ============================================================
 // CODE NODE 1: "Preparar Contexto Claude"
-// Va DESPUÉS de "Agregar Snapshot" y lee también portfolio + trades
-// Input: snapshot actual + snapshots históricos + portfolio + trades
-// Output: system_prompt + user_prompt listos para enviar a Claude
+// Input: GET Bitso Ticker + GET Portfolio + GET Trades + GET Snapshots
+// Output: system_prompt + user_prompt para Claude + metadata
 // ============================================================
 
 // --- Datos de entrada ---
-const bitsoData = $('GET Bitso Ticker').first().json.payload;
-const snapshotsRaw = $('Leer snapshots.json').first().json;
-const portfolio = $('Leer portfolio.json').first().json;
-const trades = $('Leer trades.json').first().json;
+const bitsoData     = $('GET Bitso Ticker').first().json.payload;
+const portfolioArr  = $('GET Portfolio').first().json;
+const tradesRaw     = $('GET Trades').first().json;
+const snapshotsRaw  = $('GET Snapshots').first().json;
 
-const snapshots = Array.isArray(snapshotsRaw) ? snapshotsRaw : [];
+const portfolio = Array.isArray(portfolioArr) ? portfolioArr[0] : portfolioArr;
+// Supabase devuelve trades y snapshots en orden desc — invertir a asc cronológico
+const trades    = (Array.isArray(tradesRaw)    ? tradesRaw    : []).slice().reverse();
+const snapshots = (Array.isArray(snapshotsRaw) ? snapshotsRaw : []).slice().reverse();
 
-// --- Precio actual ---
+// --- Precio actual (Bitso) ---
 const currentPrice = parseFloat(bitsoData.last);
-const bid = parseFloat(bitsoData.bid);
-const ask = parseFloat(bitsoData.ask);
-const volume = parseFloat(bitsoData.volume);
+const bid      = parseFloat(bitsoData.bid);
+const ask      = parseFloat(bitsoData.ask);
+const volume   = parseFloat(bitsoData.volume);
 const change24 = parseFloat(bitsoData.change_24);
+const vwap     = parseFloat(bitsoData.vwap);
+const high     = parseFloat(bitsoData.high);
+const low      = parseFloat(bitsoData.low);
 
-// --- Calcular resumen de snapshots (últimas 24h max) ---
-const recent = snapshots.slice(-24);
-const snapshotsSummary = recent.map(s => {
-  const time = s.timestamp.substring(5, 16).replace('T', ' '); // "MM-DD HH:mm"
-  return `${time} | ${s.price.toLocaleString()} MXN | cambio24h: ${s.change_24}%`;
+// --- Resumen de snapshots recientes ---
+const snapshotsSummary = snapshots.map(s => {
+  const time = s.captured_at.substring(5, 16).replace('T', ' '); // "MM-DD HH:mm"
+  return `${time} | ${Number(s.price).toLocaleString()} MXN | cambio24h: ${s.change_24h}`;
 }).join('\n');
 
-// --- Calcular métricas del portafolio ---
-const btcValueMxn = portfolio.btc_balance * currentPrice;
-const portfolioTotal = portfolio.mxn_balance + btcValueMxn;
-const btcExposure = portfolioTotal > 0 ? ((btcValueMxn / portfolioTotal) * 100).toFixed(1) : 0;
+// --- Métricas de portafolio ---
+const mxnBalance     = parseFloat(portfolio.mxn_balance);
+const btcBalance     = parseFloat(portfolio.btc_balance);
+const btcValueMxn    = btcBalance * currentPrice;
+const portfolioTotal = mxnBalance + btcValueMxn;
+const btcExposure    = portfolioTotal > 0 ? ((btcValueMxn / portfolioTotal) * 100).toFixed(1) : 0;
 
 // --- Precio promedio de compra ---
-const buyTrades = (Array.isArray(trades) ? trades : []).filter(t => t.action === 'BUY');
+const buyTrades = trades.filter(t => t.action === 'BUY');
 let avgBuyPrice = 0;
 if (buyTrades.length > 0) {
-  const totalBtcBought = buyTrades.reduce((sum, t) => sum + t.btc_amount, 0);
-  const totalMxnSpent = buyTrades.reduce((sum, t) => sum + t.mxn_amount, 0);
-  avgBuyPrice = totalMxnSpent / totalBtcBought;
+  const totalBtc = buyTrades.reduce((s, t) => s + parseFloat(t.btc_amount), 0);
+  const totalMxn = buyTrades.reduce((s, t) => s + parseFloat(t.mxn_amount), 0);
+  avgBuyPrice = totalBtc > 0 ? totalMxn / totalBtc : 0;
 }
 
-// --- Ganancia/pérdida no realizada ---
+// --- P&L no realizada ---
 let unrealizedPnl = 0;
-if (avgBuyPrice > 0 && portfolio.btc_balance > 0) {
+if (avgBuyPrice > 0 && btcBalance > 0) {
   unrealizedPnl = (((currentPrice - avgBuyPrice) / avgBuyPrice) * 100).toFixed(2);
 }
 
-// --- Último trade ---
-const allTrades = Array.isArray(trades) ? trades : [];
-const lastTrade = allTrades.length > 0 ? allTrades[allTrades.length - 1] : null;
+// --- Último trade + cooldown ---
+const lastTrade = trades.length > 0 ? trades[trades.length - 1] : null;
 let lastTradeAction = 'Ninguno';
+let lastTradePrice  = 0;
 let hoursSinceLastTrade = 999;
-let lastTradePrice = 0;
 
 if (lastTrade) {
   lastTradeAction = lastTrade.action;
-  lastTradePrice = lastTrade.price;
-  const lastTradeTime = new Date(lastTrade.timestamp);
-  hoursSinceLastTrade = Math.round((Date.now() - lastTradeTime.getTime()) / (1000 * 60 * 60));
+  lastTradePrice  = parseFloat(lastTrade.price);
+  hoursSinceLastTrade = Math.round((Date.now() - new Date(lastTrade.executed_at).getTime()) / 3600000);
 }
 
-// --- Cooldown check (4 horas mínimo) ---
 const COOLDOWN_HOURS = 4;
 const cooldownActive = hoursSinceLastTrade < COOLDOWN_HOURS;
 
@@ -115,14 +166,14 @@ PRECIO ACTUAL:
 - Bid: ${bid.toLocaleString()} MXN
 - Ask: ${ask.toLocaleString()} MXN
 - Volumen 24h: ${volume} BTC
-- Cambio 24h: ${change24}%
+- Cambio 24h: ${change24}
 
-HISTORIAL RECIENTE (ultimas ${recent.length} horas):
+HISTORIAL RECIENTE (ultimas ${snapshots.length} horas):
 ${snapshotsSummary}
 
 PORTAFOLIO ACTUAL:
-- MXN disponible: $${portfolio.mxn_balance.toLocaleString()}
-- BTC en mano: ${portfolio.btc_balance.toFixed(8)}
+- MXN disponible: $${mxnBalance.toLocaleString()}
+- BTC en mano: ${btcBalance.toFixed(8)}
 - Valor BTC en MXN: $${btcValueMxn.toLocaleString()}
 - Valor total portafolio: $${portfolioTotal.toLocaleString()} MXN
 - Precio promedio de compra BTC: ${avgBuyPrice > 0 ? '$' + avgBuyPrice.toLocaleString() + ' MXN' : 'N/A (sin compras aun)'}
@@ -150,9 +201,10 @@ return [{
     cooldown_active: cooldownActive,
     hours_since_last_trade: hoursSinceLastTrade,
     current_price: currentPrice,
+    bid, ask, volume, change_24: change24, vwap, high_24h: high, low_24h: low,
     portfolio_total: portfolioTotal,
-    mxn_balance: portfolio.mxn_balance,
-    btc_balance: portfolio.btc_balance,
+    mxn_balance: mxnBalance,
+    btc_balance: btcBalance,
     btc_exposure: parseFloat(btcExposure),
     avg_buy_price: avgBuyPrice,
   }
@@ -161,160 +213,114 @@ return [{
 
 // ============================================================
 // CODE NODE 2: "Procesar Decisión"
-// Va DESPUÉS de la respuesta de Claude
-// Input: respuesta de Claude + datos del contexto
-// Output: portfolio actualizado + nuevo trade (si aplica)
+// Input: respuesta de Claude Haiku + contexto
+// Output: snapshot_payload (siempre) + trade_payload (si no HOLD)
 // ============================================================
 
 // --- Parsear respuesta de Claude ---
 const claudeResponse = $('Claude Haiku').first().json;
 const content = claudeResponse.content[0].text;
 let decision;
-
 try {
   decision = JSON.parse(content);
 } catch (e) {
-  // Si Claude no devolvió JSON válido, forzar HOLD
   decision = {
     action: 'HOLD',
     amount_mxn: 0,
     amount_btc: 0,
     confidence: 0,
-    reasoning: 'Error parseando respuesta de Claude: ' + content.substring(0, 100)
+    reasoning: 'Error parseando respuesta: ' + content.substring(0, 100)
   };
 }
 
-// --- Datos del contexto ---
-const ctx = $('Preparar Contexto Claude').first().json;
-const portfolio = $('Leer portfolio.json').first().json;
-const trades = $('Leer trades.json').first().json;
-const allTrades = Array.isArray(trades) ? trades : [];
-
-const currentPrice = ctx.current_price;
+// --- Contexto ---
+const ctx            = $('Preparar Contexto Claude').first().json;
+const currentPrice   = ctx.current_price;
 const portfolioTotal = ctx.portfolio_total;
-const FEE_RATE = 0.005; // 0.5% comisión Bitso
+const FEE_RATE       = 0.005;
 
-// --- Validar y ejecutar decisión ---
-let newTrade = null;
-let updatedPortfolio = { ...portfolio };
-let actionTaken = 'HOLD';
+// --- Snapshot (siempre se inserta) ---
+const snapshotPayload = {
+  captured_at: new Date().toISOString(),
+  price:       currentPrice,
+  bid:         ctx.bid,
+  ask:         ctx.ask,
+  volume:      ctx.volume,
+  vwap:        ctx.vwap,
+  high_24h:    ctx.high_24h,
+  low_24h:     ctx.low_24h,
+  change_24h:  ctx.change_24,
+};
+
+// --- Validación y preparación del trade ---
+let tradePayload = null;
+let actionTaken  = 'HOLD';
 
 if (decision.action === 'BUY' && !ctx.cooldown_active) {
-  let amountMxn = decision.amount_mxn;
-
-  // Validaciones
+  let amountMxn = parseFloat(decision.amount_mxn) || 0;
   const maxAllowed = portfolioTotal * 0.25;
   const minAllowed = 500;
 
-  if (amountMxn < minAllowed) amountMxn = 0; // muy poco, cancelar
-  if (amountMxn > maxAllowed) amountMxn = maxAllowed; // cap al 25%
-  if (amountMxn > portfolio.mxn_balance) amountMxn = portfolio.mxn_balance; // no gastar más de lo que hay
-  if (amountMxn < minAllowed) amountMxn = 0; // si después de ajustar sigue bajo, cancelar
+  if (amountMxn < minAllowed) amountMxn = 0;
+  if (amountMxn > maxAllowed) amountMxn = maxAllowed;
+  if (amountMxn > ctx.mxn_balance) amountMxn = ctx.mxn_balance;
+  if (amountMxn < minAllowed) amountMxn = 0;
 
-  // Check exposición máxima BTC (70%)
-  const newBtcValue = (portfolio.btc_balance * currentPrice) + (amountMxn * 0.995);
-  const newTotal = (portfolio.mxn_balance - amountMxn) + newBtcValue;
-  const newExposure = newBtcValue / newTotal;
-  if (newExposure > 0.70) {
-    // Reducir monto para no pasar del 70%
-    // btcValue + (x * 0.995) = 0.70 * (mxn - x + btcValue + x*0.995)
-    const btcVal = portfolio.btc_balance * currentPrice;
-    const mxn = portfolio.mxn_balance;
-    // 0.70*(mxn - x + btcVal + x*0.995) = btcVal + x*0.995
-    // 0.70*mxn - 0.70*x + 0.70*btcVal + 0.70*0.995*x = btcVal + 0.995*x
-    // 0.70*mxn + 0.70*btcVal - btcVal = 0.995*x - 0.70*0.995*x + 0.70*x
-    // 0.70*mxn - 0.30*btcVal = x*(0.995 - 0.6965 + 0.70)
-    // 0.70*mxn - 0.30*btcVal = x*(0.9985)
+  // Cap por exposición máxima BTC (70%)
+  const btcVal = ctx.btc_balance * currentPrice;
+  const mxn    = ctx.mxn_balance;
+  const projectedExposure = (btcVal + amountMxn * 0.995) / (mxn - amountMxn + btcVal + amountMxn * 0.995);
+  if (projectedExposure > 0.70) {
     const numerator = 0.70 * mxn - 0.30 * btcVal;
-    if (numerator > 0) {
-      amountMxn = Math.min(amountMxn, numerator / 0.9985);
-    } else {
-      amountMxn = 0;
-    }
+    amountMxn = numerator > 0 ? Math.min(amountMxn, numerator / 0.9985) : 0;
     if (amountMxn < minAllowed) amountMxn = 0;
   }
 
   if (amountMxn >= minAllowed) {
     const btcBought = (amountMxn * (1 - FEE_RATE)) / currentPrice;
-    const fee = amountMxn * FEE_RATE;
-
-    updatedPortfolio.mxn_balance = parseFloat((portfolio.mxn_balance - amountMxn).toFixed(2));
-    updatedPortfolio.btc_balance = parseFloat((portfolio.btc_balance + btcBought).toFixed(8));
-    updatedPortfolio.total_trades = (portfolio.total_trades || 0) + 1;
-    updatedPortfolio.last_updated = new Date().toISOString();
-
-    newTrade = {
-      id: allTrades.length + 1,
-      timestamp: new Date().toISOString(),
-      action: 'BUY',
-      price: currentPrice,
-      mxn_amount: parseFloat(amountMxn.toFixed(2)),
-      btc_amount: parseFloat(btcBought.toFixed(8)),
-      fee_mxn: parseFloat(fee.toFixed(2)),
-      confidence: decision.confidence,
-      reasoning: decision.reasoning,
-      portfolio_value_after: parseFloat((updatedPortfolio.mxn_balance + updatedPortfolio.btc_balance * currentPrice).toFixed(2)),
+    const fee       = amountMxn * FEE_RATE;
+    tradePayload = {
+      p_action:     'BUY',
+      p_price:      currentPrice,
+      p_mxn_amount: parseFloat(amountMxn.toFixed(2)),
+      p_btc_amount: parseFloat(btcBought.toFixed(8)),
+      p_fee_mxn:    parseFloat(fee.toFixed(2)),
+      p_confidence: decision.confidence,
+      p_reasoning:  decision.reasoning,
     };
     actionTaken = 'BUY';
   }
-
 } else if (decision.action === 'SELL' && !ctx.cooldown_active) {
-  let amountBtc = decision.amount_btc;
+  let amountBtc = parseFloat(decision.amount_btc) || 0;
+  if (amountBtc > ctx.btc_balance) amountBtc = ctx.btc_balance;
 
-  // Validaciones
-  if (amountBtc > portfolio.btc_balance) amountBtc = portfolio.btc_balance;
-
-  const mxnValue = amountBtc * currentPrice;
-  const maxAllowedMxn = portfolioTotal * 0.25;
-  if (mxnValue > maxAllowedMxn) {
-    amountBtc = maxAllowedMxn / currentPrice;
-  }
-
-  const minMxnValue = 500;
-  if (amountBtc * currentPrice < minMxnValue) amountBtc = 0;
+  const mxnValue       = amountBtc * currentPrice;
+  const maxAllowedMxn  = portfolioTotal * 0.25;
+  if (mxnValue > maxAllowedMxn) amountBtc = maxAllowedMxn / currentPrice;
+  if (amountBtc * currentPrice < 500) amountBtc = 0;
 
   if (amountBtc > 0) {
     const mxnReceived = amountBtc * currentPrice * (1 - FEE_RATE);
-    const fee = amountBtc * currentPrice * FEE_RATE;
-
-    updatedPortfolio.mxn_balance = parseFloat((portfolio.mxn_balance + mxnReceived).toFixed(2));
-    updatedPortfolio.btc_balance = parseFloat((portfolio.btc_balance - amountBtc).toFixed(8));
-    updatedPortfolio.total_trades = (portfolio.total_trades || 0) + 1;
-    updatedPortfolio.last_updated = new Date().toISOString();
-
-    newTrade = {
-      id: allTrades.length + 1,
-      timestamp: new Date().toISOString(),
-      action: 'SELL',
-      price: currentPrice,
-      mxn_amount: parseFloat(mxnReceived.toFixed(2)),
-      btc_amount: parseFloat(amountBtc.toFixed(8)),
-      fee_mxn: parseFloat(fee.toFixed(2)),
-      confidence: decision.confidence,
-      reasoning: decision.reasoning,
-      portfolio_value_after: parseFloat((updatedPortfolio.mxn_balance + updatedPortfolio.btc_balance * currentPrice).toFixed(2)),
+    const fee         = amountBtc * currentPrice * FEE_RATE;
+    tradePayload = {
+      p_action:     'SELL',
+      p_price:      currentPrice,
+      p_mxn_amount: parseFloat(mxnReceived.toFixed(2)),
+      p_btc_amount: parseFloat(amountBtc.toFixed(8)),
+      p_fee_mxn:    parseFloat(fee.toFixed(2)),
+      p_confidence: decision.confidence,
+      p_reasoning:  decision.reasoning,
     };
     actionTaken = 'SELL';
   }
 }
 
-// --- Preparar output ---
-const updatedTrades = newTrade ? [...allTrades, newTrade] : allTrades;
-
-const portfolioJson = JSON.stringify(updatedPortfolio, null, 2);
-const tradesJson = JSON.stringify(updatedTrades, null, 2);
-
 return [{
   json: {
-    action_taken: actionTaken,
-    decision: decision,
-    new_trade: newTrade,
-    updated_portfolio: updatedPortfolio,
-    portfolio_base64: Buffer.from(portfolioJson).toString('base64'),
-    trades_base64: Buffer.from(tradesJson).toString('base64'),
-    commit_message: actionTaken === 'HOLD'
-      ? `hold: BTC ${currentPrice.toLocaleString()} MXN | ${decision.reasoning}`
-      : `${actionTaken.toLowerCase()}: ${newTrade.btc_amount} BTC @ ${currentPrice.toLocaleString()} MXN | ${decision.reasoning}`,
-    should_update_github: actionTaken !== 'HOLD',
+    action_taken:        actionTaken,
+    decision:            decision,
+    snapshot_payload:    snapshotPayload,
+    trade_payload:       tradePayload,
+    should_record_trade: tradePayload !== null,
   }
 }];

@@ -12,8 +12,26 @@
     <p>Paper Trading BTC/MXN con Claude AI</p>
   </header>
   <main id="app">
-    <!-- Dashboard se renderiza desde app.js -->
+    <section id="portfolio-card" class="card">
+      <h2>Portafolio</h2>
+      <div id="portfolio-body">Cargando…</div>
+    </section>
+
+    <section id="price-card" class="card">
+      <h2>Precio BTC/MXN</h2>
+      <div id="price-body">Cargando…</div>
+      <canvas id="price-chart" width="800" height="240"></canvas>
+    </section>
+
+    <section id="trades-card" class="card">
+      <h2>Historial de trades</h2>
+      <div id="trades-body">Cargando…</div>
+    </section>
   </main>
+  <footer>
+    <small>Fuente de verdad: Supabase <code>bitcho</code> schema</small>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
