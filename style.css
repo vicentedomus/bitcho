@@ -1,5 +1,4 @@
 /* Bitcho — Paper Trading Dashboard */
-/* Se implementará en Fase 5 */
 
 * {
   margin: 0;
@@ -28,4 +27,109 @@ header h1 {
 header p {
   color: #8b949e;
   margin-top: 0.5rem;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+}
+
+.card h2 {
+  font-size: 1.1rem;
+  color: #f7931a;
+  margin-bottom: 1rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.label {
+  color: #8b949e;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+strong {
+  font-size: 1rem;
+  color: #e6edf3;
+}
+
+.pnl-pos { color: #3fb950; }
+.pnl-neg { color: #f85149; }
+
+#price-chart {
+  width: 100%;
+  height: 240px;
+  margin-top: 1rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+}
+
+table.trades {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+table.trades th, table.trades td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #30363d;
+}
+
+table.trades th {
+  color: #8b949e;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+table.trades tr.trade-buy td:nth-child(2) { color: #3fb950; font-weight: 600; }
+table.trades tr.trade-sell td:nth-child(2) { color: #f85149; font-weight: 600; }
+
+footer {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+footer code {
+  background: #161b22;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  color: #f7931a;
+}
+
+.error {
+  background: #7d1515;
+  color: #ffd9d9;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
 }
