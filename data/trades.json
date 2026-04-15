@@ -118,5 +118,17 @@
     "confidence": 0.75,
     "reasoning": "Ganancia 1.01% vs avg compra (1247460 vs 1235529). Subida fuerte últimas 2h (+1.01% cambio24h, +2.39% en última hora). BTC al 70.1% (máximo permitido). Venta parcial para reducir exposición y asegurar ganancias. Comisión cubierta con spread positivo.",
     "portfolio_value_after": 10109.67
+  },
+  {
+    "id": 11,
+    "timestamp": "2026-04-15T07:01:03.712Z",
+    "action": "BUY",
+    "price": 1277220,
+    "mxn_amount": 826.14,
+    "btc_amount": 0.00064359,
+    "fee_mxn": 4.13,
+    "confidence": 0.65,
+    "reasoning": "Caída de 0.9% en 24h. Precio actual 1277220 está 3.6% por debajo del promedio 24h (~1324000). Portfolio en 45.8% BTC, dentro de límites. Tenemos 54.2% en MXN, >30% requerido. Acumular en caída con sizing MEDIA (0.65 confidence). Comisión cubierta con movimiento >0.7%. Tamaño: 15% de portafolio (~$1530) pero limitado a $826 para mantener reservas. Última operación fue VENTA hace 39h, permite reentrada.",
+    "portfolio_value_after": 10214.53
   }
 ]
