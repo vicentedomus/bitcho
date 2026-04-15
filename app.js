@@ -1,11 +1,13 @@
 // ============================================================
 // Bitcho dashboard — lee portfolio/trades/snapshots desde Supabase.
 // Requiere: supabase-js (CDN), CONFIG (config.js).
+//
+// Usa views en schema public (bitcho_portfolio, bitcho_trades, bitcho_snapshots)
+// que proxyan al schema bitcho. Esto evita el issue de PostgREST schema cache
+// que no recarga el env var PGRST_DB_SCHEMAS sin restart del container.
 // ============================================================
 
-const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-  db: { schema: CONFIG.SUPABASE_SCHEMA },
-});
+const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
 const fmtMxn = (n) => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtBtc = (n) => Number(n).toFixed(8) + ' BTC';
@@ -13,9 +15,9 @@ const fmtPct = (n) => (n >= 0 ? '+' : '') + Number(n).toFixed(2) + '%';
 
 async function loadAll() {
   const [portfolioRes, tradesRes, snapshotsRes] = await Promise.all([
-    sb.from('portfolio').select('*').eq('id', 1).single(),
-    sb.from('trades').select('*').order('executed_at', { ascending: false }).limit(50),
-    sb.from('snapshots').select('*').order('captured_at', { ascending: false }).limit(168),
+    sb.from('bitcho_portfolio').select('*').eq('id', 1).single(),
+    sb.from('bitcho_trades').select('*').order('executed_at', { ascending: false }).limit(50),
+    sb.from('bitcho_snapshots').select('*').order('captured_at', { ascending: false }).limit(168),
   ]);
 
   if (portfolioRes.error) return showError(portfolioRes.error);
@@ -24,7 +26,7 @@ async function loadAll() {
 
   const portfolio = portfolioRes.data;
   const trades    = tradesRes.data;
-  const snapshots = snapshotsRes.data.slice().reverse(); // ascending for chart
+  const snapshots = snapshotsRes.data.slice().reverse();
 
   renderPortfolio(portfolio, snapshots);
   renderPrice(snapshots);
@@ -119,8 +121,7 @@ function drawChart(snapshots) {
   const range = max - min || 1;
   const stepX = w / Math.max(1, snapshots.length - 1);
 
-  // Grid de referencia
-  ctx.strokeStyle = '#e5e7eb';
+  ctx.strokeStyle = '#30363d';
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = (h / 4) * i;
@@ -130,7 +131,6 @@ function drawChart(snapshots) {
     ctx.stroke();
   }
 
-  // Línea de precio
   ctx.strokeStyle = '#f59e0b';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -141,8 +141,7 @@ function drawChart(snapshots) {
   });
   ctx.stroke();
 
-  // Etiquetas min/max
-  ctx.fillStyle = '#6b7280';
+  ctx.fillStyle = '#8b949e';
   ctx.font = '11px system-ui, sans-serif';
   ctx.fillText(fmtMxn(max), 4, 12);
   ctx.fillText(fmtMxn(min), 4, h - 4);
@@ -154,15 +153,13 @@ function showError(error) {
     `<div class="error">Error al cargar datos: ${error.message}</div>`);
 }
 
-// Carga inicial
 loadAll();
 
-// Realtime: recargar cuando haya cambios en portfolio/trades/snapshots
+// Realtime: escucha cambios en las tablas base (schema bitcho, no las views)
 sb.channel('bitcho-changes')
   .on('postgres_changes', { event: '*', schema: 'bitcho', table: 'portfolio' }, loadAll)
   .on('postgres_changes', { event: '*', schema: 'bitcho', table: 'trades'    }, loadAll)
   .on('postgres_changes', { event: '*', schema: 'bitcho', table: 'snapshots' }, loadAll)
   .subscribe();
 
-// Fallback: reload manual cada 10 min por si el canal se cae
 setInterval(loadAll, 10 * 60 * 1000);
