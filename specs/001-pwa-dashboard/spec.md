@@ -14,6 +14,14 @@ Bitcho corre un experimento de *paper trading* de Bitcoin (BTC/MXN) donde Claude
 
 El dashboard es **observacional**: no ejecuta órdenes ni cambia configuración (el motor vive en n8n). Su valor es narrar el estado real del experimento con una estética terminal-CRT deliberada.
 
+## Clarifications
+
+### Session 2026-07-23
+
+- Q: ¿Cómo refresca el dashboard, dado que los datos se actualizan cada hora? → A: Suscripción realtime (push al entrar decisión/operación/estado nuevo) sobre una carga inicial; degrada con gracia a estático si realtime no está disponible.
+- Q: ¿Qué muestra el rango "TODO" y las gráficas, dado que el histórico llega a ~1150 puntos (3 meses)? → A: Ventana acotada por defecto — 24H/48H directos y "TODO" limitado a una ventana razonable y/o downsampleada, priorizando carga rápida en móvil.
+- Q: ¿Qué se ve sin red o si falla la primera carga? → A: El último dato real cacheado (network-first); solo en cold-start sin red se cae a la serie DEMO embebida. Ambos casos marcan badge DEMO.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Ver el estado de las 3 estrategias de un vistazo (Priority: P1)
@@ -81,7 +89,7 @@ El usuario revisa, para una estrategia, la lista cronológica (más reciente pri
 
 ### Edge Cases
 
-- **Sin red / fuente de datos caída**: el dashboard NO queda en blanco — muestra un indicador **DEMO** y cae a una serie de precios embebida para seguir siendo navegable.
+- **Sin red / fuente de datos caída**: el dashboard NO queda en blanco — muestra el **último dato real cacheado** con badge **DEMO**; solo en cold-start sin red (nunca hubo carga) cae a una serie de precios embebida.
 - **Última operación fue hace mucho**: una estrategia puede llevar semanas solo en HOLD (mercado lateral); el estado y el log deben reflejarlo sin romperse (avg de compra y ops "congelados", decisiones HOLD recientes).
 - **Estrategia sin BTC en mano**: el precio promedio de compra se muestra como "N/A" y la exposición como 0%.
 - **Decisión sin razonamiento**: la entrada del log se muestra sin texto de razonamiento, sin romper el layout.
@@ -95,18 +103,19 @@ El usuario revisa, para una estrategia, la lista cronológica (más reciente pri
 - **FR-002**: El dashboard MUST leer exclusivamente datos reales del backend (estado de cada estrategia, su configuración, sus decisiones horarias, sus operaciones y la serie de precios) y NO simular datos cuando hay conexión.
 - **FR-003**: El sistema MUST ser **solo lectura**: no ejecuta órdenes ni modifica configuración ni estado del experimento.
 - **FR-004**: El header MUST mostrar el precio BTC/MXN más reciente y un indicador de estado **LIVE** cuando la fuente responde, o **DEMO** cuando no.
-- **FR-005**: Ante fallo de red o de la fuente de datos, el sistema MUST degradar a un modo DEMO con una serie de precios embebida, manteniendo la app navegable (nunca pantalla en blanco).
+- **FR-005**: Ante fallo de red o de la fuente de datos, el sistema MUST mantener la app navegable en modo DEMO: primero sirviendo el **último dato real cacheado** (última respuesta buena) y, solo si nunca hubo una carga previa (cold-start sin red), cayendo a una **serie de precios embebida**; en ambos casos MUST indicar el estado DEMO y nunca quedar en pantalla en blanco.
+- **FR-005a**: El sistema MUST cargar un estado inicial al abrir y luego MUST reflejar de forma automática (vía suscripción realtime a decisiones/operaciones/estado) la llegada de nuevos datos sin recargar; si la suscripción realtime no está disponible, MUST degradar con gracia al estado ya cargado sin bloquear la app.
 - **FR-006**: La vista RESUMEN MUST presentar una card por estrategia con nombre, valor total, %P&L con color según signo, exposición, número de operaciones y una sparkline de tendencia; y cada card MUST navegar al detalle de su estrategia al tocarla.
 - **FR-007**: La vista RESUMEN MUST incluir un panel comparativo con las 3 series superpuestas, una baseline del capital inicial, un toggle MXN ↔ % P&L que recomputa series y ejes, y una leyenda con valor y %P&L por estrategia.
 - **FR-008**: La vista de estrategia MUST mostrar el estado actual (valor total, %P&L, MXN disponible, BTC en mano, valor BTC, P&L, precio promedio de compra o "N/A", operaciones).
 - **FR-009**: La vista de estrategia MUST mostrar la **configuración real** con la que el motor corre esa estrategia, mostrando únicamente los parámetros que apliquen a cada una.
-- **FR-010**: La vista de estrategia MUST incluir una gráfica de comportamiento que superponga su equity contra el precio de BTC, con selector de rango 24H / 48H / TODO que recorta la ventana temporal.
+- **FR-010**: La vista de estrategia MUST incluir una gráfica de comportamiento que superponga su equity contra el precio de BTC, con selector de rango 24H / 48H / TODO que recorta la ventana temporal. El rango "TODO" MUST acotarse a una ventana razonable y/o representarse downsampleado para no degradar el tiempo de carga en móvil (no se exige dibujar los ~1150 puntos crudos).
 - **FR-011**: La vista de estrategia MUST incluir un log cronológico (más reciente primero) de las decisiones horarias, incluyendo **HOLD**, cada una con acción coloreada, hora, precio, confianza (barra + valor), razonamiento y, si aplicó, el monto operado.
 - **FR-012**: El log MUST ofrecer filtros TODAS / BUY / SELL / HOLD con conteo por tipo, distinguiendo visualmente las entradas HOLD (atenuadas) de las operaciones.
 - **FR-013**: La navegación entre RESUMEN y las 3 estrategias MUST ser por pestañas siempre visibles en el header.
 - **FR-014**: La app MUST estar diseñada para uso **exclusivamente móvil** (columna centrada de ancho acotado), sin una experiencia de escritorio dedicada.
 - **FR-015**: La app MUST recrear fielmente la estética terminal-CRT del handoff de diseño (paleta verde/negro, tipografía monoespaciada, glow, scanlines, radios mínimos) según sus design tokens.
-- **FR-016**: La app MUST ser instalable como PWA (nombre, íconos, pantalla de inicio) y MUST seguir siendo abrible tras una primera carga aunque la red esté degradada.
+- **FR-016**: La app MUST ser instalable como PWA (nombre, íconos, pantalla de inicio) y, tras una primera carga exitosa, MUST seguir abriéndose sin red mostrando el último dato real cacheado (ver FR-005).
 - **FR-017**: La app MUST notificar/recuperar de forma transparente cuando exista una versión nueva desplegada (sin dejar al usuario atrapado en una versión cacheada indefinidamente).
 - **FR-018**: La app MUST reemplazar el frontend actual del repo como superficie servida, conservando la configuración pública de conexión (URL + llave pública que respeta las reglas de acceso del backend).
 
@@ -114,7 +123,7 @@ El usuario revisa, para una estrategia, la lista cronológica (más reciente pri
 
 - **Estrategia (perfil)**: una de las tres configuraciones que corren en paralelo; tiene nombre real, nombre para mostrar, estado activo y un conjunto de parámetros de operación (umbral de confianza, tope por operación, cooldown, piso de BTC, stop-loss, objetivo de ganancia). Fuente: `bitcho_portfolios_meta`.
 - **Estado de portafolio**: saldo MXN, BTC en mano, operaciones acumuladas, inversión inicial y costo base promedio de una estrategia. Fuente: `bitcho_portfolio` (una fila por estrategia).
-- **Decisión**: el resultado horario del modelo para una estrategia — acción (BUY/SELL/HOLD), confianza, razonamiento, precio y exposición al momento, si derivó en operación. Fuente: `bitcho_decisions`.
+- **Decisión**: el resultado horario del modelo para una estrategia — acción (BUY/SELL/HOLD), confianza, razonamiento, precio, exposición y **valor del portafolio al momento**, y si derivó en operación. Fuente: `bitcho_decisions`. El campo de valor-al-momento (poblado al 100% en el histórico) es la **serie de equity horaria** que alimenta las gráficas comparativa y de comportamiento.
 - **Operación (trade)**: una compra o venta ejecutada por una estrategia — acción, precio, monto MXN/BTC, comisión, confianza, valor posterior. Fuente: `bitcho_trades`.
 - **Snapshot de precio**: captura horaria del mercado BTC/MXN (precio, cambio 24h, volumen, etc.) que forma la serie de precios común. Fuente: `bitcho_snapshots`.
 
@@ -129,6 +138,7 @@ El usuario revisa, para una estrategia, la lista cronológica (más reciente pri
 - **SC-005**: Con la red caída, la app sigue siendo navegable entre las 4 vistas en modo DEMO **sin pantalla en blanco ni error bloqueante**.
 - **SC-006**: El usuario puede, para cualquier estrategia, filtrar el log a BUY / SELL / HOLD y ver conteos correctos que suman el total de decisiones de esa estrategia.
 - **SC-007**: La app es instalable en un teléfono como PWA y abre a pantalla completa desde el ícono de inicio.
+- **SC-008**: Cuando el motor registra una decisión/operación nueva, el dashboard la refleja **sin que el usuario recargue** (con la app abierta y red disponible).
 
 ## Assumptions
 

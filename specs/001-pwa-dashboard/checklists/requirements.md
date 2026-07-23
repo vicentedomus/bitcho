@@ -34,3 +34,4 @@
 - Nombres de vistas (`bitcho_portfolios_meta`, etc.) aparecen solo como *fuente de dato* en Key Entities/Assumptions para trazabilidad; el cuerpo del spec (stories, FRs, SCs) se mantiene tecnología-agnóstico.
 - Alcance acotado a **frontend read-only**; explícitamente fuera: cambios de backend/n8n, ejecución de órdenes, experiencia de escritorio.
 - Decisiones de producto ya cerradas con el usuario: (1) SPA React, (2) datos reales sin simulador, (3) nombres reales de estrategias. Reflejadas en FR-001/002/003 y SC-002/003.
+- Sesión `/speckit-clarify` 2026-07-23: 3 preguntas de alto impacto resueltas (refresco realtime, profundidad histórica acotada, offline last-cached→DEMO). Integradas en FR-005/005a/010/016, edge cases, Key Entities y SC-008. Re-validación: 16/16 ítems en verde, sin regresiones.
