@@ -4,3 +4,4 @@
 # Es el ÚNICO knob per-repo: lo que no esté aquí no existe en disco y no carga.
 huashu-design
 ui-ux-pro-max
+speckit-with-superpowers

@@ -1,9 +1,22 @@
 # Claude Code: skills COMPARTIDAS materializadas por .claude/hooks/sync-skills.sh
 # en cada sesión desde vicentedomus/claude-skills (ver .claude/skills.txt).
-# No se comitean: skills.txt es el único knob per-repo.
+# No se comitean: los knobs (.txt) + settings + hooks son el único estado durable.
 .claude/*
 !.claude/settings.json
 !.claude/hooks/
 !.claude/skills.txt
+!.claude/upstream-skills.txt
+!.claude/speckit.txt
 .claude/skills/
+.claude/.ponytail-mode
 .claude/settings.local.json
+
+# spec-kit (combo vendorizado, materializado por .claude/hooks/sync-speckit.sh):
+# el CORE de .specify/ se regenera cada sesión → ignorado. La constitución (sembrada
+# con el weave la 1ª vez) y specs/ son contenido del proyecto → SE COMITEAN.
+.specify/templates/
+.specify/scripts/
+.specify/workflows/
+.specify/integrations/
+.specify/init-options.json
+.specify/integration.json

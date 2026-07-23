@@ -1,0 +1,3 @@
+# .claude/speckit.txt — su sola existencia activa el combo spec-kit (sync-speckit.sh).
+# Vacío = usa el combo vendorizado en main de vicentedomus/claude-skills.
+# Una línea "@<tag>" pinea otra versión del combo (rama/tag/commit de claude-skills).
