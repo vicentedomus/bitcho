@@ -1,0 +1,15 @@
+{
+  "name": "Bitcho — Paper Trading BTC/MXN",
+  "short_name": "Bitcho",
+  "description": "Dashboard de 3 estrategias de paper trading de Bitcoin decididas por Claude AI.",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

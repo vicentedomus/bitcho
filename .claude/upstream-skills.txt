@@ -1,0 +1,13 @@
+# Skills upstream (repos de TERCEROS, layout skills/*/) materializadas en cada
+# sesión de la nube por .claude/hooks/sync-upstream-skills.sh.
+#
+# Formato:  owner/repo[@ref]   [skill1 skill2 ...]
+#   - sin skills listadas  → trae TODAS las del skills/ de ese repo
+#   - con skills listadas  → solo esas (whitelist por fuente)
+#   - @ref opcional         → rama/tag/commit (sin @ref = main)
+#   - una LÍNEA = "clona este repo"; sin línea = no se clona
+#
+# Las skills compartidas propias (claude-skills) van aparte, en .claude/skills.txt.
+
+obra/Superpowers
+DietrichGebert/ponytail   ponytail ponytail-review
