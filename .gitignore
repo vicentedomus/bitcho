@@ -20,3 +20,14 @@
 .specify/integrations/
 .specify/init-options.json
 .specify/integration.json
+
+# Frontend (Vite + React SPA)
+node_modules/
+dist/
+version.json
+test-results/
+playwright-report/
+.vercel/
+*.log
+.env*
+.DS_Store

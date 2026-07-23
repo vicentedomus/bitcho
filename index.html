@@ -1,38 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
   <title>Bitcho — Paper Trading BTC/MXN</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <header>
-    <h1>Bitcho</h1>
-    <p>Paper Trading BTC/MXN con Claude AI</p>
-  </header>
-  <main id="app">
-    <section id="portfolio-card" class="card">
-      <h2>Portafolio</h2>
-      <div id="portfolio-body">Cargando…</div>
-    </section>
-
-    <section id="price-card" class="card">
-      <h2>Precio BTC/MXN</h2>
-      <div id="price-body">Cargando…</div>
-      <canvas id="price-chart" width="800" height="240"></canvas>
-    </section>
-
-    <section id="trades-card" class="card">
-      <h2>Historial de trades</h2>
-      <div id="trades-body">Cargando…</div>
-    </section>
-  </main>
-  <footer>
-    <small>Fuente de verdad: Supabase <code>bitcho</code> schema</small>
-  </footer>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

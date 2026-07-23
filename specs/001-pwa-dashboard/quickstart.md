@@ -44,6 +44,8 @@ npm run test:mobile        # Playwright config iPhone: smoke E2E
 
 ## Definition of Done (gate)
 
-- [ ] Escenarios 1–5 verificados en preview de Vercel (evidencia anotada).
-- [ ] `test:unit` + `typecheck` + `test:mobile` en verde.
-- [ ] Review por severidad sin críticos abiertos (Art. III).
+- [x] `test:unit` (25 tests) + `typecheck` + `test:mobile` (4 E2E, Chromium iPhone) en verde.
+- [x] Build de producción OK (`dist/` con app + PWA + `version.json`).
+- [x] Escenarios verificados vía E2E: RESUMEN con las 3 estrategias reales (1), detalle + config real + log (2/3), offline→DEMO sin pantalla en blanco (4). Screenshots en `test-results/`.
+- [ ] Verificación LIVE end-to-end en preview de Vercel (el navegador headless del CI no alcanza Supabase por el proxy → corre en DEMO; en Vercel se confirma LIVE + realtime).
+- [ ] Review por severidad sin críticos abiertos (Art. III) — en el PR.
